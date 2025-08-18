@@ -1,2 +1,1 @@
-# visualizer-wankel
-Kinetic Extruder Visualier Wankel Engine 
+# Kinetic Extruder Visualier Wankel Engine 
