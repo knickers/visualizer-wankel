@@ -1,6 +1,13 @@
-rotor_radius = 40;
+// Distance between the stepper motor screws
+Motor_Size = 31; // [20:0.1:50]
+// Diameter inside the motor screw holes
+Mounting_Tab_Size = 6.15; // [4.5:0.01:7.5]
+// Motor mount tab radius
+Mount_Tab_R = Mounting_Tab_Size / 2;
+
+rotor_radius = Motor_Size * 0.6;
 // Pitch radius
-rotor_gear_radius = 17;
+rotor_gear_radius = rotor_radius * 0.425;
 // Must be even number!!
 stator_gear_teeth = 14;
 // for large flatness $fn will need to be higher
@@ -10,9 +17,10 @@ thickness = 8;
 //===========================================
 // General stuff
 //$fn = $preview ? 60 : 80; // facet number
-$fa = $preview ? 8 : 1;  // facet angle
-$fs = $preview ? 5 : 2;  // facet size
+$fa = $preview ? 3 : 1;  // facet angle
+$fs = $preview ? 1.25 : 0.75;  // facet size
 alpha = 360 * $t; // for animation
+SQRT2 = sqrt(2);  // Square root of 2
 
 //===========================================
 // Gears
@@ -22,8 +30,8 @@ hole_diameter = 0+0;
 twist = 0+0;
 teeth_to_hide = 0+0;
 pressure_angle = 28;
-clearance = 0.3;
-backlash = 0.2;
+clearance = 0.25;
+backlash = 0.125;
 
 //===========================================
 //   Given the above parameters, we can determine the rest of the rotor and housing geometry
@@ -61,7 +69,8 @@ if ($preview) {
 
 	color("red")
 	rotate([0, 0, alpha])
-		eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
+		translate([0, 0, clearance])
+			eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
 }
 else {
 	//===========================================
@@ -88,6 +97,42 @@ else {
 			eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
 }
 
+module mount_tab() {
+	//d = Mount_Tab_R/2;
+	//w = PISTON + 2*WALL;
+
+	translate([0, 0, -1])
+		difference() {
+			cylinder(r = Mount_Tab_R, h = 1); // outside diameter
+			translate([0, 0, -1])
+				cylinder(r = Mount_Tab_R-0.6, h = 3); // inside diameter
+		}
+
+	// upper crossmember
+	//translate([-w/2, Mount_Tab_R-2, 0])
+		//cube([w, 2, 1]);
+
+	// lower crossmember
+	//translate([-w/2, -Mount_Tab_R, 0])
+		//cube([w, 2, 1]);
+
+	// right support
+	//translate([Mount_Tab_R-1, -Mount_Tab_R/2, 0])
+		//cube([1, Mount_Tab_R, 0.5]);
+
+	// left support
+	//translate([-Mount_Tab_R, -Mount_Tab_R/2, 0])
+		//cube([1, Mount_Tab_R, 0.5]);
+}
+
+module mounts() {
+	s = Motor_Size / 2 * SQRT2;
+
+	for (i = [0:3])
+		rotate([0, 0, 45-i*90])
+			translate([0, s, 0])
+				mount_tab();
+}
 
 module wankelRotor (mm_per_tooth,
 	n_rotor_gear, thickness,
@@ -108,90 +153,76 @@ module wankelRotor (mm_per_tooth,
 	}
 }
 
-
 module housing(mm_per_tooth, stator_gear_teeth, thickness, 
 	hole_diameter, twist, teeth_to_hide,   
 	pressure_angle, clearance, backlash,
 	rotor_radius, ecc, housing_hole_rad
 ) {
 	housing_clearance = 1.01;
-	n = $preview ? 40 : 100;
-	//echo(str("housing length is ",2.6*rotor_radius," mm"));
+	n = $preview ? 40 : 120;
+	R = housing_clearance*2/3*rotor_radius;
+	r = housing_clearance*1/3*rotor_radius;
 	difference() {
 		union() {
-			difference() {
-				translate([0, 0, thickness/4])
-					cube([2*rotor_radius, 2.6*rotor_radius, 3/2*thickness], center=true);
-				epitrochoidLinear(housing_clearance*2/3*rotor_radius,
-						 housing_clearance*1/3*rotor_radius, 
-						ecc, n, n, 3/2*thickness, 0);
+			linear_extrude(height=3/2*thickness, convexity=10, twist=twist) {
+				difference() {
+					offset(delta=2)
+						epitrochoid(R, r, ecc);
+					epitrochoid(R, r, ecc);
+				}
 			}
 			gear(mm_per_tooth, stator_gear_teeth, thickness,  
 				hole_diameter, twist, teeth_to_hide,   
 				pressure_angle, clearance, backlash);
+			mounts();
 		}
 		cylinder(r = housing_hole_rad, h = 4*thickness, center = true);
 	}
 }
 
-
 module slipRing(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
-	r = 0.98 * 0.99 * rotor_gear_outer_radius;
+	r = rotor_gear_outer_radius - clearance;
 	difference() {
-		cylinder(r = r, h = thickness/2, center = true);
-		cylinder(r = r-2, h = thickness/2+2, center = true);
+		cylinder(r=r, h=thickness/2, center=true);
+		cylinder(r=r-1, h=thickness/2+2, center=true);
 	}
-	rotate(90, [0,0,1])
-	cube([r*2-3, 2, thickness/2], center=true);
+	translate([0, 0.5-r/2, 0])
+		cube([1, r-1, thickness/2], center=true);
 }
-
 
 module eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
 	union() {
-		translate([0,0,-thickness/2])
-			cylinder(r = 0.98 * housing_hole_rad, h = 2*thickness, center = true);
+		translate([0,0,-thickness/2-clearance*2])
+			cylinder(r = 0.98 * housing_hole_rad, h = 1.5*thickness + clearance*2);
 		translate([0, -ecc, 3/4*thickness+0.01]) {
 			slipRing(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
 		}
 	}
 }
 
-
 module bulgieTriangle(bt_R, bt_flatness, bt_thickness) {
 	r_bigCirc = sqrt(bt_R*bt_R + bt_R*bt_flatness + bt_flatness*bt_flatness);
 	rotate([0, 0, 30])
 		intersection() {
 			translate([bt_flatness, 0, 0])
-				cylinder(r = r_bigCirc, h = bt_thickness, center = true);
+				cylinder(r=r_bigCirc, h=bt_thickness, center=true);
 			translate([- 0.5 * bt_flatness, sin(60) * bt_flatness, 0])
-				cylinder(r = r_bigCirc, h = bt_thickness, center = true);
+				cylinder(r=r_bigCirc, h=bt_thickness, center=true);
 			translate([- 0.5 * bt_flatness, -sin(60) * bt_flatness, 0])
-				cylinder(r = r_bigCirc, h = bt_thickness, center = true);
+				cylinder(r=r_bigCirc, h=bt_thickness, center=true);
 		}
 }
 
-
-module epitrochoidLinear(R, r, d, n, p, thickness, twist) {
-	// Epitrochoid Wedge, Linear Extrude
-	echo(p);
+module epitrochoid(R, r, d) {
+	n = fragments(R);
+	rs = R + r;
 	dth = 360/n;
-	linear_extrude(height = thickness, convexity = 10, twist = twist) {
-		union() {
-			for ( i = [0:p-1] ) {
-				polygon(
-					points = [
-						[0, 0], 
-						[(R+r)*cos(dth*i) - d*cos((R+r)/r*dth*i), (R+r)*sin(dth*i) - d*sin((R+r)/r*dth*i)], 
-						[(R+r)*cos(dth*(i+1)) - d*cos((R+r)/r*dth*(i+1)), (R+r)*sin(dth*(i+1)) - d*sin((R+r)/r*dth*(i+1))]
-					],
-					paths = [[0, 1, 2]],
-					convexity = 10
-				); 
-			}
-		}
-	}
+	rth = rs / r * dth;
+	polygon([
+		for (i = [0:n-1])
+			[rs*cos(dth*i) - d*cos(rth*i), rs*sin(dth*i) - d*sin(rth*i)],
+	], convexity = 10);
 }
-
 
 module internal_gear (
 	// This is just a quick edit of Leemon's gear() module to make an internal gear
@@ -285,10 +316,12 @@ module gear (
 function polar(r,theta) = r*[sin(theta), cos(theta)];
 
 //unwind a string this many degrees to go from radius r1 to radius r2
-function iang(r1,r2) = sqrt((r2/r1)*(r2/r1) - 1)/3.1415926*180 - acos(r1/r2);
+function iang(r1,r2) = sqrt((r2/r1)*(r2/r1) - 1)/PI*180 - acos(r1/r2);
 
 //radius a fraction f up the curved side of the tooth 
 function q7(f,r,b,r2,t,s) = q6(b,s,t,(1-f)*max(b,r)+f*r2);
 
 //point at radius d on the involute curve
 function q6(b,s,t,d) = polar(d,s*(iang(b,d)+t));
+
+function fragments(r) = ($fn>0?($fn>3?$fn:3):ceil(max(min(360/$fa,r*2*PI/$fs),5)));
