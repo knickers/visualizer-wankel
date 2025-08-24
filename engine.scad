@@ -7,11 +7,10 @@ Mount_Tab_R = Mounting_Tab_Size / 2;
 
 rotor_radius = Motor_Size * 0.6;
 // Pitch radius
-rotor_gear_radius = rotor_radius * 0.425;
+rotor_gear_radius = rotor_radius/2-1;
 // Must be even number!!
-stator_gear_teeth = 14;
-// for large flatness $fn will need to be higher
-flatness = 50;
+stator_gear_teeth = 10;
+flatness = 30+0; // Bulge of the rotor
 thickness = 8;
 
 //===========================================
@@ -21,6 +20,7 @@ $fa = $preview ? 3 : 1;  // facet angle
 $fs = $preview ? 1.25 : 0.75;  // facet size
 alpha = 360 * $t; // for animation
 SQRT2 = sqrt(2);  // Square root of 2
+SIN60 = sin(60);
 
 //===========================================
 // Gears
@@ -67,7 +67,7 @@ if ($preview) {
 		rotor_radius, ecc, housing_hole_rad
 	);
 
-	*color("red")
+	color("red")
 	rotate([0, 0, alpha])
 		translate([0, 0, clearance])
 			eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
@@ -99,9 +99,9 @@ else {
 
 module mount_tab() {
 	difference() {
-		cylinder(r = Mount_Tab_R, h = 1); // outside diameter
+		cylinder(r=Mount_Tab_R, h=1); // outside diameter
 		translate([0, 0, -1])
-			cylinder(r = Mount_Tab_R-0.6, h = 3); // inside diameter
+			cylinder(r=Mount_Tab_R-0.6, h=3); // inside diameter
 	}
 }
 
@@ -126,9 +126,8 @@ module rotor(mm_per_tooth,
 			hole_diameter, twist, teeth_to_hide,
 			pressure_angle, 0, 0);
 		difference() {
-			rotate(30, [0,0,1])
-				linear_extrude(thickness)
-					reuleaux(rotor_radius, flatness);
+			rotate([0, 0, 30])
+				bulgieTriangle();
 			// Slip ring cutout
 			translate([0, 0, thickness/2-0.01])
 				cylinder(r=rotor_gear_outer_radius, h=thickness/2+1);
@@ -144,28 +143,21 @@ module housing(mm_per_tooth, stator_gear_teeth, thickness,
 	rotor_radius, ecc, housing_hole_rad
 ) {
 	housing_clearance = 1.01;
-	n = $preview ? 40 : 120;
-	R = housing_clearance*2/3*rotor_radius;
-	r = housing_clearance*1/3*rotor_radius;
-	difference() {
-		union() {
-			linear_extrude(height=3/2*thickness, convexity=10, twist=twist) {
-				difference() {
-					offset(delta=2)
-						epitrochoid(R, r, ecc);
-					epitrochoid(R, r, ecc);
-				}
-			}
-			gear(mm_per_tooth, stator_gear_teeth, thickness,  
-				hole_diameter, twist, teeth_to_hide,   
-				pressure_angle, clearance, backlash);
-			mounts();
+	R = rotor_radius * 2/3 * housing_clearance;
+	r = rotor_radius * 1/3 * housing_clearance;
+	linear_extrude(height=thickness, convexity=10, twist=twist)
+		difference() {
+			offset(delta=2)
+				epitrochoid(R, r, ecc);
+			epitrochoid(R, r, ecc);
 		}
-		cylinder(r = housing_hole_rad, h = 4*thickness, center = true);
-	}
+	gear(mm_per_tooth, stator_gear_teeth, thickness,  
+		hole_diameter, twist, teeth_to_hide,   
+		pressure_angle, clearance, backlash);
+	mounts();
 }
 
-module slipRing(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
+module slip_ring(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
 	r = rotor_gear_outer_radius - clearance;
 	difference() {
 		cylinder(r=r, h=thickness/2, center=true);
@@ -176,54 +168,34 @@ module slipRing(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
 }
 
 module eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
-	union() {
-		translate([0,0,-thickness/2-clearance*2])
-			cylinder(r = 0.98 * housing_hole_rad, h = 1.5*thickness + clearance*2);
-		translate([0, -ecc, 3/4*thickness+0.01]) {
-			slipRing(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
-		}
-	}
+	translate([0,0,-thickness/2-clearance*2])
+		cylinder(r=0.98 * housing_hole_rad, h=1.5*thickness + clearance*2);
+	translate([0, -ecc, 3/4*thickness+0.01])
+		slip_ring(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
 }
 
-module reuleaux(bt_R, bt_flatness) {
-	r_bigCirc = sqrt(bt_R*bt_R + bt_R*bt_flatness + bt_flatness*bt_flatness);
-	n = fragments(r=r_bigCirc, a=120);
-	a = 120 / n;
-	s60 = sin(60);
-	o = 15;
-	echo(n=n, a=a, s60=s60);
+module reuleaux(r) {
+	r2 = r / 2;
+	n = fragments(r=r, a=60);
+	a = 60 / n;
+	y = r*SIN60 - r2;
 	polygon([
-		/**/
-		for (i = [o:n-o-1]) [
-			r_bigCirc*cos(a*i) - bt_flatness/2,
-			r_bigCirc*sin(a*i) - bt_flatness*s60
-		],
-		/**/
-		/**/
-		for (i = [n+o:n*2-o-1]) [
-			r_bigCirc*cos(a*i) + bt_flatness,
-			r_bigCirc*sin(a*i)
-		],
-		/**/
-		for (i = [n*2+o:n*3-o-1]) [
-			r_bigCirc*cos(a*i) - bt_flatness/2,
-			r_bigCirc*sin(a*i) + bt_flatness*s60
-		],
-		/**/
+		for (i = [0:n-1])     [r*cos(a*i)-r2, r*sin(a*i)-y],
+		for (i = [n*2:n*3-1]) [r*cos(a*i)+r2, r*sin(a*i)-y],
+		for (i = [n*4:n*5-1]) [r*cos(a*i),    r*sin(a*i)+r2],
 	]);
 }
 
-module bulgieTriangle(bt_R, bt_flatness, bt_thickness) {
-	r_bigCirc = sqrt(bt_R*bt_R + bt_R*bt_flatness + bt_flatness*bt_flatness);
-	rotate([0, 0, 30])
-		intersection() {
-			translate([bt_flatness, 0, 0])
-				cylinder(r=r_bigCirc, h=bt_thickness, center=true);
-			translate([- 0.5 * bt_flatness, sin(60) * bt_flatness, 0])
-				cylinder(r=r_bigCirc, h=bt_thickness, center=true);
-			translate([- 0.5 * bt_flatness, -sin(60) * bt_flatness, 0])
-				cylinder(r=r_bigCirc, h=bt_thickness, center=true);
-		}
+module bulgieTriangle() {
+	r = sqrt(rotor_radius*rotor_radius + rotor_radius*flatness + flatness*flatness);
+	intersection() {
+		translate([flatness, 0, 0])
+			cylinder(r=r, h=thickness);
+		translate([-flatness/2, flatness*SIN60, 0])
+			cylinder(r=r, h=thickness);
+		translate([-flatness/2, -flatness*SIN60, 0])
+			cylinder(r=r, h=thickness);
+	}
 }
 
 module epitrochoid(R, r, d) {
@@ -306,7 +278,7 @@ module gear (
 	difference() {
 		for (i = [0:number_of_teeth-teeth_to_hide-1] )
 			rotate([0,0,i*360/number_of_teeth])
-				linear_extrude(height = thickness, center = true, convexity = 10, twist = twist)
+				linear_extrude(height=thickness, center=true, convexity=10, twist=twist)
 					polygon(
 						points=[
 							[0, -hole_diameter/10],
