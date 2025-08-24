@@ -36,12 +36,12 @@ backlash = 0.125;
 //===========================================
 //   Given the above parameters, we can determine the rest of the rotor and housing geometry
 //
-//   Eccentricity is the offset distance of the crank (the crank is also known as the "eccentric").  
+//   Eccentricity is the offset distance of the crank (the crank is also known as the "eccentric").
 //   Eccentricity is also the difference in pitch radii of the two gears.
 
 ecc = rotor_gear_radius / 3;
 //echo(str("Eccentricity is ",ecc," mm"));
-n_rotor_gear = 3/2 * stator_gear_teeth; 
+n_rotor_gear = 3/2 * stator_gear_teeth;
 mm_per_tooth = 2 * PI * rotor_gear_radius / n_rotor_gear;
 //echo(str("mm_per_tooth is ",mm_per_tooth," mm"));
 rotor_gear_outer_radius =  mm_per_tooth * n_rotor_gear / PI / 2 + mm_per_tooth / PI + mm_per_tooth/2;
@@ -55,14 +55,14 @@ if ($preview) {
 			rotor(mm_per_tooth,
 				n_rotor_gear, thickness,
 				hole_diameter, twist, teeth_to_hide, pressure_angle,
-				rotor_radius, flatness, 
+				rotor_radius, flatness,
 				rotor_gear_outer_radius
 			);
 		}
 	}
 
-	housing(mm_per_tooth, stator_gear_teeth, thickness, 
-		hole_diameter, twist, teeth_to_hide,   
+	housing(mm_per_tooth, stator_gear_teeth, thickness,
+		hole_diameter, twist, teeth_to_hide,
 		pressure_angle, clearance, backlash,
 		rotor_radius, ecc, housing_hole_rad
 	);
@@ -74,20 +74,20 @@ if ($preview) {
 }
 else {
 	//===========================================
-	// This section places individual parts so they can be 
+	// This section places individual parts so they can be
 	// easily exported as STL.
 
 	translate([-rotor_radius,rotor_radius,thickness/2])
 		rotor(mm_per_tooth,
 			n_rotor_gear, thickness,
 			hole_diameter, twist, teeth_to_hide, pressure_angle,
-			rotor_radius, flatness, 
+			rotor_radius, flatness,
 			rotor_gear_outer_radius
 		);
 
 	translate([rotor_radius+5,0,thickness/2])
-		housing(mm_per_tooth, stator_gear_teeth, thickness, 
-			hole_diameter, twist, teeth_to_hide,   
+		housing(mm_per_tooth, stator_gear_teeth, thickness,
+			hole_diameter, twist, teeth_to_hide,
 			pressure_angle, clearance, backlash,
 			rotor_radius, ecc, housing_hole_rad
 		);
@@ -118,7 +118,7 @@ module mounts() {
 module rotor(mm_per_tooth,
 	n_rotor_gear, thickness,
 	hole_diameter, twist, teeth_to_hide, pressure_angle,
-	rotor_radius, flatness, 
+	rotor_radius, flatness,
 	rotor_gear_outer_radius
 ) {
 	union() {
@@ -137,8 +137,8 @@ module rotor(mm_per_tooth,
 	}
 }
 
-module housing(mm_per_tooth, stator_gear_teeth, thickness, 
-	hole_diameter, twist, teeth_to_hide,   
+module housing(mm_per_tooth, stator_gear_teeth, thickness,
+	hole_diameter, twist, teeth_to_hide,
 	pressure_angle, clearance, backlash,
 	rotor_radius, ecc, housing_hole_rad
 ) {
@@ -151,8 +151,8 @@ module housing(mm_per_tooth, stator_gear_teeth, thickness,
 				epitrochoid(R, r, ecc);
 			epitrochoid(R, r, ecc);
 		}
-	gear(mm_per_tooth, stator_gear_teeth, thickness,  
-		hole_diameter, twist, teeth_to_hide,   
+	gear(mm_per_tooth, stator_gear_teeth, thickness,
+		hole_diameter, twist, teeth_to_hide,
 		pressure_angle, clearance, backlash);
 	mounts();
 }
@@ -250,7 +250,7 @@ module internal_gear (
 
 
 //===========================================
-//   This gear() module is from 
+//   This gear() module is from
 //   Leemon Baird's PublicDomainGearV1.1.scad
 //   which can be found here:
 //   http://www.thingiverse.com/thing:5505
@@ -303,7 +303,7 @@ function polar(r,theta) = r*[sin(theta), cos(theta)];
 //unwind a string this many degrees to go from radius r1 to radius r2
 function iang(r1,r2) = sqrt((r2/r1)*(r2/r1) - 1)/PI*180 - acos(r1/r2);
 
-//radius a fraction f up the curved side of the tooth 
+//radius a fraction f up the curved side of the tooth
 function q7(f,r,b,r2,t,s) = q6(b,s,t,(1-f)*max(b,r)+f*r2);
 
 //point at radius d on the involute curve
