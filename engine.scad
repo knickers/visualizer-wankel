@@ -50,9 +50,9 @@ housing_hole_rad = 0.6 * mm_per_tooth * stator_gear_teeth / PI / 2;
 if ($preview) {
 	//   Assembled engine
 
-	translate([ecc*sin(alpha), -ecc*cos(alpha), thickness/2]) {
+	translate([ecc*sin(alpha), -ecc*cos(alpha), 0]) {
 		rotate([0, 0, alpha/3]) {
-			wankelRotor (mm_per_tooth,
+			rotor(mm_per_tooth,
 				n_rotor_gear, thickness,
 				hole_diameter, twist, teeth_to_hide, pressure_angle,
 				rotor_radius, flatness, 
@@ -67,7 +67,7 @@ if ($preview) {
 		rotor_radius, ecc, housing_hole_rad
 	);
 
-	color("red")
+	*color("red")
 	rotate([0, 0, alpha])
 		translate([0, 0, clearance])
 			eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
@@ -78,7 +78,7 @@ else {
 	// easily exported as STL.
 
 	translate([-rotor_radius,rotor_radius,thickness/2])
-		wankelRotor (mm_per_tooth,
+		rotor(mm_per_tooth,
 			n_rotor_gear, thickness,
 			hole_diameter, twist, teeth_to_hide, pressure_angle,
 			rotor_radius, flatness, 
@@ -98,57 +98,42 @@ else {
 }
 
 module mount_tab() {
-	//d = Mount_Tab_R/2;
-	//w = PISTON + 2*WALL;
-
-	translate([0, 0, -1])
-		difference() {
-			cylinder(r = Mount_Tab_R, h = 1); // outside diameter
-			translate([0, 0, -1])
-				cylinder(r = Mount_Tab_R-0.6, h = 3); // inside diameter
-		}
-
-	// upper crossmember
-	//translate([-w/2, Mount_Tab_R-2, 0])
-		//cube([w, 2, 1]);
-
-	// lower crossmember
-	//translate([-w/2, -Mount_Tab_R, 0])
-		//cube([w, 2, 1]);
-
-	// right support
-	//translate([Mount_Tab_R-1, -Mount_Tab_R/2, 0])
-		//cube([1, Mount_Tab_R, 0.5]);
-
-	// left support
-	//translate([-Mount_Tab_R, -Mount_Tab_R/2, 0])
-		//cube([1, Mount_Tab_R, 0.5]);
+	difference() {
+		cylinder(r = Mount_Tab_R, h = 1); // outside diameter
+		translate([0, 0, -1])
+			cylinder(r = Mount_Tab_R-0.6, h = 3); // inside diameter
+	}
 }
 
 module mounts() {
 	s = Motor_Size / 2 * SQRT2;
 
+	translate([0, 0, -1])
 	for (i = [0:3])
 		rotate([0, 0, 45-i*90])
 			translate([0, s, 0])
 				mount_tab();
 }
 
-module wankelRotor (mm_per_tooth,
+module rotor(mm_per_tooth,
 	n_rotor_gear, thickness,
 	hole_diameter, twist, teeth_to_hide, pressure_angle,
 	rotor_radius, flatness, 
 	rotor_gear_outer_radius
 ) {
 	union() {
-		translate([0,0,-thickness/4])
-			internal_gear ( mm_per_tooth, n_rotor_gear, thickness/2,  
-				hole_diameter, twist, teeth_to_hide,   
-				pressure_angle, 0, 0);
+		internal_gear(mm_per_tooth, n_rotor_gear, thickness/2,
+			hole_diameter, twist, teeth_to_hide,
+			pressure_angle, 0, 0);
 		difference() {
-			bulgieTriangle(rotor_radius, flatness, thickness);
+			rotate(30, [0,0,1])
+				linear_extrude(thickness)
+					reuleaux(rotor_radius, flatness);
 			// Slip ring cutout
-			cylinder(r = 0.99 * rotor_gear_outer_radius, h = 1.1*thickness, center = true);
+			translate([0, 0, thickness/2-0.01])
+				cylinder(r=rotor_gear_outer_radius, h=thickness/2+1);
+			translate([0, 0, -1])
+				cylinder(r=rotor_gear_outer_radius*0.9, h=thickness/2+2);
 		}
 	}
 }
@@ -200,6 +185,34 @@ module eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
 	}
 }
 
+module reuleaux(bt_R, bt_flatness) {
+	r_bigCirc = sqrt(bt_R*bt_R + bt_R*bt_flatness + bt_flatness*bt_flatness);
+	n = fragments(r=r_bigCirc, a=120);
+	a = 120 / n;
+	s60 = sin(60);
+	o = 15;
+	echo(n=n, a=a, s60=s60);
+	polygon([
+		/**/
+		for (i = [o:n-o-1]) [
+			r_bigCirc*cos(a*i) - bt_flatness/2,
+			r_bigCirc*sin(a*i) - bt_flatness*s60
+		],
+		/**/
+		/**/
+		for (i = [n+o:n*2-o-1]) [
+			r_bigCirc*cos(a*i) + bt_flatness,
+			r_bigCirc*sin(a*i)
+		],
+		/**/
+		for (i = [n*2+o:n*3-o-1]) [
+			r_bigCirc*cos(a*i) - bt_flatness/2,
+			r_bigCirc*sin(a*i) + bt_flatness*s60
+		],
+		/**/
+	]);
+}
+
 module bulgieTriangle(bt_R, bt_flatness, bt_thickness) {
 	r_bigCirc = sqrt(bt_R*bt_R + bt_R*bt_flatness + bt_flatness*bt_flatness);
 	rotate([0, 0, 30])
@@ -221,7 +234,7 @@ module epitrochoid(R, r, d) {
 	polygon([
 		for (i = [0:n-1])
 			[rs*cos(dth*i) - d*cos(rth*i), rs*sin(dth*i) - d*sin(rth*i)],
-	], convexity = 10);
+	], convexity=5);
 }
 
 module internal_gear (
@@ -243,9 +256,9 @@ module internal_gear (
 	t = mm_per_tooth/2-backlash/2;                //tooth thickness at pitch circle
 	k = -iang(b, p) - t/2/p/PI*180;               //angle to where involute meets base circle on each side of tooth
 	difference() {
-		for (i = [0:number_of_teeth-teeth_to_hide-1] )
+		for (i = [0:number_of_teeth-teeth_to_hide-1])
 			rotate([0,0,i*360/number_of_teeth])
-				linear_extrude(height = thickness, center = true, convexity = 10, twist = twist)
+				linear_extrude(height=thickness, convexity=10, twist=twist)
 					polygon(
 						points=[
 							polar(c + mm_per_tooth/2, -181/number_of_teeth),
@@ -259,7 +272,7 @@ module internal_gear (
 						],
 						paths=[[17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]]
 					);
-		cylinder(h=2*thickness+1, r=hole_diameter/2, center=true);
+		cylinder(h=2*thickness+1, r=hole_diameter/2);
 	}
 };
 
@@ -324,4 +337,4 @@ function q7(f,r,b,r2,t,s) = q6(b,s,t,(1-f)*max(b,r)+f*r2);
 //point at radius d on the involute curve
 function q6(b,s,t,d) = polar(d,s*(iang(b,d)+t));
 
-function fragments(r) = ($fn>0?($fn>3?$fn:3):ceil(max(min(360/$fa,r*2*PI/$fs),5)));
+function fragments(r,a=360)=$fn>0?($fn>3?$fn:3):ceil(max(min(a/$fa,r*2*PI/$fs),5));
