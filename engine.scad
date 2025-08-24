@@ -5,7 +5,7 @@ Mounting_Tab_Size = 6.15; // [4.5:0.01:7.5]
 // Motor mount tab radius
 Mount_Tab_R = Mounting_Tab_Size / 2;
 
-rotor_radius = Motor_Size * 0.6;
+rotor_radius = Motor_Size * 0.64;
 // Pitch radius
 rotor_gear_radius = rotor_radius/2-1;
 // Must be even number!!
@@ -26,7 +26,6 @@ SIN60 = sin(60);
 // Gears
 // These parameters are common to both gears
 
-hole_diameter = 0+0;
 twist = 0+0;
 teeth_to_hide = 0+0;
 pressure_angle = 28;
@@ -44,134 +43,130 @@ ecc = rotor_gear_radius / 3;
 n_rotor_gear = 3/2 * stator_gear_teeth;
 mm_per_tooth = 2 * PI * rotor_gear_radius / n_rotor_gear;
 //echo(str("mm_per_tooth is ",mm_per_tooth," mm"));
-rotor_gear_outer_radius =  mm_per_tooth * n_rotor_gear / PI / 2 + mm_per_tooth / PI + mm_per_tooth/2;
-housing_hole_rad = 0.6 * mm_per_tooth * stator_gear_teeth / PI / 2;
+rotor_gear_outer_radius = mm_per_tooth*n_rotor_gear/PI/2 + mm_per_tooth/PI + mm_per_tooth/2;
+housing_hole_rad = 0.5 * mm_per_tooth * stator_gear_teeth / PI / 2;
+hole_diameter = housing_hole_rad*2;
 
 if ($preview) {
+	//===========================================
 	//   Assembled engine
 
-	translate([ecc*sin(alpha), -ecc*cos(alpha), 0]) {
-		rotate([0, 0, alpha/3]) {
-			rotor(mm_per_tooth,
-				n_rotor_gear, thickness,
-				hole_diameter, twist, teeth_to_hide, pressure_angle,
-				rotor_radius, flatness,
-				rotor_gear_outer_radius
-			);
-		}
-	}
+	color("blue")
+	translate([ecc*sin(alpha), -ecc*cos(alpha), 0])
+		rotate([0, 0, alpha/3])
+			rotor();
 
-	housing(mm_per_tooth, stator_gear_teeth, thickness,
-		hole_diameter, twist, teeth_to_hide,
-		pressure_angle, clearance, backlash,
-		rotor_radius, ecc, housing_hole_rad
-	);
+	housing();
+
+	color("yellow")
+		rotate(180, [0,1,0])
+			mount();
+
+	translate([0, 0, thickness/2])
+		mirror([0, 0, 1])
+			central_gear();
 
 	color("red")
 	rotate([0, 0, alpha])
 		translate([0, 0, clearance])
-			eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
+			eccentric();
 }
 else {
 	//===========================================
 	// This section places individual parts so they can be
 	// easily exported as STL.
 
-	translate([-rotor_radius,rotor_radius,thickness/2])
-		rotor(mm_per_tooth,
-			n_rotor_gear, thickness,
-			hole_diameter, twist, teeth_to_hide, pressure_angle,
-			rotor_radius, flatness,
-			rotor_gear_outer_radius
-		);
+	translate([-rotor_radius-Mounting_Tab_Size, rotor_radius+Mounting_Tab_Size, 0])
+		rotate([0, 0, -75])
+			rotor();
 
-	translate([rotor_radius+5,0,thickness/2])
-		housing(mm_per_tooth, stator_gear_teeth, thickness,
-			hole_diameter, twist, teeth_to_hide,
-			pressure_angle, clearance, backlash,
-			rotor_radius, ecc, housing_hole_rad
-		);
+	translate([rotor_radius*1.2+Mounting_Tab_Size, rotor_radius*1.5+Mounting_Tab_Size, 0]) {
+		housing();
+		translate([0, 0, thickness/4])
+			central_gear();
+	}
 
-	translate([-rotor_radius,-rotor_radius/1.5,thickness])
+	rotate([0, 0, 45])
+		mount();
+
+	translate([-rotor_radius*1.2,-rotor_radius,thickness])
 		rotate(180, [0,1,0])
-			eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
+			eccentric();
 }
 
-module mount_tab() {
+module central_gear() {
+	echo(d=hole_diameter);
 	difference() {
-		cylinder(r=Mount_Tab_R, h=1); // outside diameter
-		translate([0, 0, -1])
-			cylinder(r=Mount_Tab_R-0.6, h=3); // inside diameter
+		union() {
+			translate([0, 0, thickness/4])
+				gear(mm_per_tooth, stator_gear_teeth, thickness/2,
+					twist, teeth_to_hide,
+					pressure_angle, backlash, backlash);
+			translate([-housing_hole_rad, -housing_hole_rad, 0])
+				cube([hole_diameter, hole_diameter, thickness/2+1]);
+		}
+		translate([0, 0, -0.5])
+			cylinder(d=hole_diameter, h=thickness/2+2);
 	}
 }
 
-module mounts() {
+module mount() {
 	s = Motor_Size / 2 * SQRT2;
 
-	translate([0, 0, -1])
 	for (i = [0:3])
-		rotate([0, 0, 45-i*90])
+		rotate([0, 0, 45-i*90]) {
 			translate([0, s, 0])
-				mount_tab();
+				difference() { // mount tab
+					cylinder(r=Mount_Tab_R, h=2); // outside diameter
+					translate([0, 0, 1])
+						cylinder(r=Mount_Tab_R-0.6, h=2); // inside diameter
+				}
+			translate([-Mount_Tab_R, 0, 0])
+				cube([Mount_Tab_R*2, s, 1]);
+		}
 }
 
-module rotor(mm_per_tooth,
-	n_rotor_gear, thickness,
-	hole_diameter, twist, teeth_to_hide, pressure_angle,
-	rotor_radius, flatness,
-	rotor_gear_outer_radius
-) {
-	union() {
-		internal_gear(mm_per_tooth, n_rotor_gear, thickness/2,
-			hole_diameter, twist, teeth_to_hide,
-			pressure_angle, 0, 0);
-		difference() {
-			rotate([0, 0, 30])
-				bulgieTriangle();
-			// Slip ring cutout
-			translate([0, 0, thickness/2-0.01])
-				cylinder(r=rotor_gear_outer_radius, h=thickness/2+1);
-			translate([0, 0, -1])
-				cylinder(r=rotor_gear_outer_radius*0.9, h=thickness/2+2);
-		}
+module rotor() {
+	internal_gear(mm_per_tooth, n_rotor_gear, thickness/2,
+		twist, teeth_to_hide, pressure_angle, 0, 0);
+	difference() {
+		rotate([0, 0, 30])
+			bulgieTriangle();
+		// Slip ring cutout
+		translate([0, 0, thickness/2+($preview?0.01:0)])
+			cylinder(r=rotor_gear_outer_radius, h=thickness/2+1);
+		// Gear cutout
+		translate([0, 0, -1])
+			cylinder(r=rotor_gear_outer_radius*0.95, h=thickness/2+2);
 	}
 }
 
-module housing(mm_per_tooth, stator_gear_teeth, thickness,
-	hole_diameter, twist, teeth_to_hide,
-	pressure_angle, clearance, backlash,
-	rotor_radius, ecc, housing_hole_rad
-) {
-	housing_clearance = 1.01;
-	R = rotor_radius * 2/3 * housing_clearance;
-	r = rotor_radius * 1/3 * housing_clearance;
-	linear_extrude(height=thickness, convexity=10, twist=twist)
+module housing() {
+	R = rotor_radius * 2/3;
+	r = rotor_radius * 1/3;
+	linear_extrude(height=thickness, convexity=4, twist=twist)
 		difference() {
-			offset(delta=2)
+			offset(delta=clearance+2)
 				epitrochoid(R, r, ecc);
-			epitrochoid(R, r, ecc);
+			offset(delta=clearance)
+				epitrochoid(R, r, ecc);
 		}
-	gear(mm_per_tooth, stator_gear_teeth, thickness,
-		hole_diameter, twist, teeth_to_hide,
-		pressure_angle, clearance, backlash);
-	mounts();
 }
 
-module slip_ring(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
+module slip_ring() {
 	r = rotor_gear_outer_radius - clearance;
 	difference() {
 		cylinder(r=r, h=thickness/2, center=true);
 		cylinder(r=r-1, h=thickness/2+2, center=true);
 	}
-	translate([0, 0.5-r/2, 0])
-		cube([1, r-1, thickness/2], center=true);
+	cube([1, r*2-1, thickness/2], center=true);
 }
 
-module eccentric(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad) {
+module eccentric() {
 	translate([0,0,-thickness/2-clearance*2])
 		cylinder(r=0.98 * housing_hole_rad, h=1.5*thickness + clearance*2);
 	translate([0, -ecc, 3/4*thickness+0.01])
-		slip_ring(thickness, ecc, rotor_gear_outer_radius, housing_hole_rad);
+		slip_ring();
 }
 
 module reuleaux(r) {
@@ -206,7 +201,7 @@ module epitrochoid(R, r, d) {
 	polygon([
 		for (i = [0:n-1])
 			[rs*cos(dth*i) - d*cos(rth*i), rs*sin(dth*i) - d*sin(rth*i)],
-	], convexity=5);
+	], convexity=4);
 }
 
 module internal_gear (
@@ -214,7 +209,6 @@ module internal_gear (
 	mm_per_tooth    = 3,    //this is the "circular pitch", the circumference of the pitch circle divided by the number of teeth
 	number_of_teeth = 11,   //total number of teeth around the entire perimeter
 	thickness       = 6,    //thickness of gear in mm
-	hole_diameter   = 3,    //diameter of the hole in the center, in mm
 	twist           = 0,    //teeth rotate this many degrees from bottom of gear to top.  360 makes the gear a screw with each thread going around once
 	teeth_to_hide   = 0,    //number of teeth to delete to make this only a fraction of a circle
 	pressure_angle  = 28,   //Controls how straight or bulged the tooth sides are. In degrees.
@@ -227,25 +221,22 @@ module internal_gear (
 	r = p-(c-p)-clearance;                        //radius of root circle
 	t = mm_per_tooth/2-backlash/2;                //tooth thickness at pitch circle
 	k = -iang(b, p) - t/2/p/PI*180;               //angle to where involute meets base circle on each side of tooth
-	difference() {
-		for (i = [0:number_of_teeth-teeth_to_hide-1])
-			rotate([0,0,i*360/number_of_teeth])
-				linear_extrude(height=thickness, convexity=10, twist=twist)
-					polygon(
-						points=[
-							polar(c + mm_per_tooth/2, -181/number_of_teeth),
-							polar(r, -181/number_of_teeth),
-							polar(r, r<b ? k : -180/number_of_teeth),
-							q7(0/5,r,b,c,k, 1),q7(1/5,r,b,c,k, 1),q7(2/5,r,b,c,k, 1),q7(3/5,r,b,c,k, 1),q7(4/5,r,b,c,k, 1),q7(5/5,r,b,c,k, 1),
-							q7(5/5,r,b,c,k,-1),q7(4/5,r,b,c,k,-1),q7(3/5,r,b,c,k,-1),q7(2/5,r,b,c,k,-1),q7(1/5,r,b,c,k,-1),q7(0/5,r,b,c,k,-1),
-							polar(r, r<b ? -k : 180/number_of_teeth),
-							polar(r, 181/number_of_teeth),
-							polar(c + mm_per_tooth/2, 181/number_of_teeth)
-						],
-						paths=[[17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]]
-					);
-		cylinder(h=2*thickness+1, r=hole_diameter/2);
-	}
+	for (i = [0:number_of_teeth-teeth_to_hide-1])
+		rotate([0,0,i*360/number_of_teeth])
+			linear_extrude(height=thickness, convexity=10, twist=twist)
+				polygon(
+					points=[
+						polar(c + mm_per_tooth/2, -181/number_of_teeth),
+						polar(r, -181/number_of_teeth),
+						polar(r, r<b ? k : -180/number_of_teeth),
+						q7(0/5,r,b,c,k, 1),q7(1/5,r,b,c,k, 1),q7(2/5,r,b,c,k, 1),q7(3/5,r,b,c,k, 1),q7(4/5,r,b,c,k, 1),q7(5/5,r,b,c,k, 1),
+						q7(5/5,r,b,c,k,-1),q7(4/5,r,b,c,k,-1),q7(3/5,r,b,c,k,-1),q7(2/5,r,b,c,k,-1),q7(1/5,r,b,c,k,-1),q7(0/5,r,b,c,k,-1),
+						polar(r, r<b ? -k : 180/number_of_teeth),
+						polar(r, 181/number_of_teeth),
+						polar(c + mm_per_tooth/2, 181/number_of_teeth)
+					],
+					paths=[[17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]]
+				);
 };
 
 
@@ -262,7 +253,6 @@ module gear (
 	mm_per_tooth    = 3,    //this is the "circular pitch", the circumference of the pitch circle divided by the number of teeth
 	number_of_teeth = 11,   //total number of teeth around the entire perimeter
 	thickness       = 6,    //thickness of gear in mm
-	hole_diameter   = 3,    //diameter of the hole in the center, in mm
 	twist           = 0,    //teeth rotate this many degrees from bottom of gear to top.  360 makes the gear a screw with each thread going around once
 	teeth_to_hide   = 0,    //number of teeth to delete to make this only a fraction of a circle
 	pressure_angle  = 28,   //Controls how straight or bulged the tooth sides are. In degrees.
@@ -275,24 +265,21 @@ module gear (
 	r = p-(c-p)-clearance;                        //radius of root circle
 	t = mm_per_tooth/2-backlash/2;                //tooth thickness at pitch circle
 	k = -iang(b, p) - t/2/p/PI*180;               //angle to where involute meets base circle on each side of tooth
-	difference() {
-		for (i = [0:number_of_teeth-teeth_to_hide-1] )
-			rotate([0,0,i*360/number_of_teeth])
-				linear_extrude(height=thickness, center=true, convexity=10, twist=twist)
-					polygon(
-						points=[
-							[0, -hole_diameter/10],
-							polar(r, -181/number_of_teeth),
-							polar(r, r<b ? k : -180/number_of_teeth),
-							q7(0/5,r,b,c,k, 1),q7(1/5,r,b,c,k, 1),q7(2/5,r,b,c,k, 1),q7(3/5,r,b,c,k, 1),q7(4/5,r,b,c,k, 1),q7(5/5,r,b,c,k, 1),
-							q7(5/5,r,b,c,k,-1),q7(4/5,r,b,c,k,-1),q7(3/5,r,b,c,k,-1),q7(2/5,r,b,c,k,-1),q7(1/5,r,b,c,k,-1),q7(0/5,r,b,c,k,-1),
-							polar(r, r<b ? -k : 180/number_of_teeth),
-							polar(r, 181/number_of_teeth)
-						],
-						paths=[[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]]
-					);
-		cylinder(h=2*thickness+1, r=hole_diameter/2, center=true);
-	}
+	for (i = [0:number_of_teeth-teeth_to_hide-1] )
+		rotate([0,0,i*360/number_of_teeth])
+			linear_extrude(height=thickness, center=true, convexity=10, twist=twist)
+				polygon(
+					points=[
+						[0, -hole_diameter/10],
+						polar(r, -181/number_of_teeth),
+						polar(r, r<b ? k : -180/number_of_teeth),
+						q7(0/5,r,b,c,k, 1),q7(1/5,r,b,c,k, 1),q7(2/5,r,b,c,k, 1),q7(3/5,r,b,c,k, 1),q7(4/5,r,b,c,k, 1),q7(5/5,r,b,c,k, 1),
+						q7(5/5,r,b,c,k,-1),q7(4/5,r,b,c,k,-1),q7(3/5,r,b,c,k,-1),q7(2/5,r,b,c,k,-1),q7(1/5,r,b,c,k,-1),q7(0/5,r,b,c,k,-1),
+						polar(r, r<b ? -k : 180/number_of_teeth),
+						polar(r, 181/number_of_teeth)
+					],
+					paths=[[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]]
+				);
 };
 
 //these 4 functions are used by gear
