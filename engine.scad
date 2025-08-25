@@ -16,8 +16,8 @@ thickness = 8;
 //===========================================
 // General stuff
 //$fn = $preview ? 60 : 80; // facet number
-$fa = $preview ? 3 : 1;  // facet angle
-$fs = $preview ? 1.25 : 0.75;  // facet size
+$fa = $preview ? 6 : 1;  // facet angle
+$fs = $preview ? 2 : 0.75;  // facet size
 alpha = 360 * $t; // for animation
 SQRT2 = sqrt(2);  // Square root of 2
 SIN60 = sin(60);
@@ -68,8 +68,9 @@ if ($preview) {
 
 	color("red")
 	rotate([0, 0, alpha])
-		translate([0, 0, clearance])
-			eccentric();
+		translate([0, 0, thickness+clearance])
+			rotate(180, [0,1,0])
+				eccentric();
 }
 else {
 	//===========================================
@@ -90,20 +91,19 @@ else {
 		mount();
 
 	translate([-rotor_radius*1.2,-rotor_radius,thickness])
-		rotate(180, [0,1,0])
-			eccentric();
+		eccentric();
 }
 
 module central_gear() {
-	echo(d=hole_diameter);
+	//echo(d=hole_diameter);
 	difference() {
 		union() {
 			translate([0, 0, thickness/4])
 				gear(mm_per_tooth, stator_gear_teeth, thickness/2,
 					twist, teeth_to_hide,
 					pressure_angle, backlash, backlash);
-			translate([-housing_hole_rad, -housing_hole_rad, 0])
-				cube([hole_diameter, hole_diameter, thickness/2+1]);
+			translate([-housing_hole_rad-1, -housing_hole_rad-1, thickness/2])
+				cube([hole_diameter+2, hole_diameter+2, 1]);
 		}
 		translate([0, 0, -0.5])
 			cylinder(d=hole_diameter, h=thickness/2+2);
@@ -113,17 +113,25 @@ module central_gear() {
 module mount() {
 	s = Motor_Size / 2 * SQRT2;
 
-	for (i = [0:3])
-		rotate([0, 0, 45-i*90]) {
-			translate([0, s, 0])
-				difference() { // mount tab
-					cylinder(r=Mount_Tab_R, h=2); // outside diameter
-					translate([0, 0, 1])
-						cylinder(r=Mount_Tab_R-0.6, h=2); // inside diameter
+	difference() {
+		union() {
+			for (i = [0:3])
+				rotate([0, 0, 45-i*90]) {
+					translate([0, s, 0])
+						difference() { // mount tab
+							cylinder(r=Mount_Tab_R, h=2); // outside diameter
+							translate([0, 0, 1])
+								cylinder(r=Mount_Tab_R-0.6, h=2); // inside diameter
+						}
+					translate([-Mount_Tab_R, 0, 0])
+						cube([Mount_Tab_R*2, s, 1]);
 				}
-			translate([-Mount_Tab_R, 0, 0])
-				cube([Mount_Tab_R*2, s, 1]);
+			translate([0, 0, 0.5])
+				cube([hole_diameter+4, hole_diameter+4, 1], center=true);
 		}
+		translate([0, 0, 0.5])
+			cube([hole_diameter+2, hole_diameter+2, 2], center=true);
+	}
 }
 
 module rotor() {
@@ -153,20 +161,16 @@ module housing() {
 		}
 }
 
-module slip_ring() {
-	r = rotor_gear_outer_radius - clearance;
-	difference() {
-		cylinder(r=r, h=thickness/2, center=true);
-		cylinder(r=r-1, h=thickness/2+2, center=true);
-	}
-	cube([1, r*2-1, thickness/2], center=true);
-}
-
 module eccentric() {
-	translate([0,0,-thickness/2-clearance*2])
-		cylinder(r=0.98 * housing_hole_rad, h=1.5*thickness + clearance*2);
-	translate([0, -ecc, 3/4*thickness+0.01])
-		slip_ring();
+	cylinder(r=housing_hole_rad-clearance, h=thickness+2+clearance*2);
+	translate([0, -ecc, thickness/4]) {
+		r = rotor_gear_outer_radius - clearance;
+		difference() {
+			cylinder(r=r, h=thickness/2, center=true);
+			cylinder(r=r-1, h=thickness/2+2, center=true);
+		}
+		cube([1, r*2-1, thickness/2], center=true);
+	}
 }
 
 module reuleaux(r) {
@@ -175,7 +179,7 @@ module reuleaux(r) {
 	a = 60 / n;
 	y = r*SIN60 - r2;
 	polygon([
-		for (i = [0:n-1])     [r*cos(a*i)-r2, r*sin(a*i)-y],
+		for (i = [n*0:n*1-1]) [r*cos(a*i)-r2, r*sin(a*i)-y],
 		for (i = [n*2:n*3-1]) [r*cos(a*i)+r2, r*sin(a*i)-y],
 		for (i = [n*4:n*5-1]) [r*cos(a*i),    r*sin(a*i)+r2],
 	]);
