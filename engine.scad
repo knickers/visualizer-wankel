@@ -56,7 +56,8 @@ if ($preview) {
 		rotate([0, 0, alpha/3])
 			rotor();
 
-	housing();
+	translate([0, 0, -1])
+		housing();
 
 	color("yellow")
 		rotate(180, [0,1,0])
@@ -82,7 +83,11 @@ else {
 			rotor();
 
 	translate([rotor_radius*1.2+Mounting_Tab_Size, rotor_radius*1.5+Mounting_Tab_Size, 0]) {
-		housing();
+		difference() {
+			housing();
+			translate([0, 0, thickness])
+				mount();
+		}
 		translate([0, 0, thickness/4])
 			central_gear();
 	}
@@ -127,7 +132,7 @@ module mount() {
 						cube([Mount_Tab_R*2, s, 1]);
 				}
 			translate([0, 0, 0.5])
-				cube([hole_diameter+4, hole_diameter+4, 1], center=true);
+				cube([hole_diameter+6, hole_diameter+6, 1], center=true);
 		}
 		translate([0, 0, 0.5])
 			cube([hole_diameter+2, hole_diameter+2, 2], center=true);
@@ -152,7 +157,7 @@ module rotor() {
 module housing() {
 	R = rotor_radius * 2/3;
 	r = rotor_radius * 1/3;
-	linear_extrude(height=thickness, convexity=4, twist=twist)
+	linear_extrude(height=thickness+1, convexity=4, twist=twist)
 		difference() {
 			offset(delta=clearance+2)
 				epitrochoid(R, r, ecc);
