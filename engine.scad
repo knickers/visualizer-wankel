@@ -225,9 +225,9 @@ module internal_gear (
 	backlash        = 0.0   //gap between two meshing teeth, in the direction along the circumference of the pitch circle
 ) {
 	p = mm_per_tooth * number_of_teeth / PI / 2;  //radius of pitch circle
-	c = p + mm_per_tooth / PI - clearance;        //radius of outer circle
+	c = p + mm_per_tooth / PI;                    //radius of outer circle
 	b = p*cos(pressure_angle);                    //radius of base circle
-	r = p-(c-p)-clearance;                        //radius of root circle
+	r = p-(c-p)+clearance;                        //radius of root circle
 	t = mm_per_tooth/2-backlash/2;                //tooth thickness at pitch circle
 	k = -iang(b, p) - t/2/p/PI*180;               //angle to where involute meets base circle on each side of tooth
 	for (i = [0:number_of_teeth-teeth_to_hide-1])
@@ -235,14 +235,14 @@ module internal_gear (
 			linear_extrude(height=thickness, convexity=10, twist=twist)
 				polygon(
 					points=[
-						polar(c + mm_per_tooth/2, -181/number_of_teeth),
+						polar(c+mm_per_tooth/2, -181/number_of_teeth),
 						polar(r, -181/number_of_teeth),
 						polar(r, r<b ? k : -180/number_of_teeth),
 						q7(0/5,r,b,c,k, 1),q7(1/5,r,b,c,k, 1),q7(2/5,r,b,c,k, 1),q7(3/5,r,b,c,k, 1),q7(4/5,r,b,c,k, 1),q7(5/5,r,b,c,k, 1),
 						q7(5/5,r,b,c,k,-1),q7(4/5,r,b,c,k,-1),q7(3/5,r,b,c,k,-1),q7(2/5,r,b,c,k,-1),q7(1/5,r,b,c,k,-1),q7(0/5,r,b,c,k,-1),
 						polar(r, r<b ? -k : 180/number_of_teeth),
 						polar(r, 181/number_of_teeth),
-						polar(c + mm_per_tooth/2, 181/number_of_teeth)
+						polar(c+mm_per_tooth/2, 181/number_of_teeth)
 					],
 					paths=[[17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]]
 				);
