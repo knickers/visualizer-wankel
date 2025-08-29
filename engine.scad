@@ -56,7 +56,7 @@ if ($preview) {
 		rotate([0, 0, alpha/3])
 			rotor();
 
-	translate([0, 0, -1])
+	translate([0, 0, 0.01-1])
 		housing();
 
 	color("yellow")
