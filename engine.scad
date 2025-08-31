@@ -89,8 +89,7 @@ else {
 				scale([1, 1, 2])
 					mount();
 		}
-		translate([0, 0, thickness/4])
-			central_gear();
+		central_gear();
 	}
 
 	rotate([0, 0, 45])
