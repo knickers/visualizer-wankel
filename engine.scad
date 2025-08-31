@@ -86,7 +86,8 @@ else {
 		difference() {
 			housing();
 			translate([0, 0, thickness])
-				mount();
+				scale([1, 1, 2])
+					mount();
 		}
 		translate([0, 0, thickness/4])
 			central_gear();
@@ -95,7 +96,7 @@ else {
 	rotate([0, 0, 45])
 		mount();
 
-	translate([-rotor_radius*1.2,-rotor_radius,thickness])
+	translate([-rotor_radius*1.2, -rotor_radius, 0])
 		eccentric();
 }
 
