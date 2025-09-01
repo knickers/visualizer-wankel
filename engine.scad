@@ -57,7 +57,7 @@ if ($preview) {
 	//===========================================
 	//   Assembled engine
 
-	color("blue")
+	color("SteelBlue")
 		translate([ECC*sin(ALPHA), -ECC*cos(ALPHA), 0])
 			rotate([0, 0, ALPHA/3])
 				rotor();
@@ -65,7 +65,7 @@ if ($preview) {
 	translate([0, 0, 0.01-1])
 		housing();
 
-	color("yellow")
+	color("LightGray")
 		rotate(180, [0,1,0])
 			mount();
 
@@ -73,7 +73,7 @@ if ($preview) {
 		mirror([0, 0, 1])
 			central_gear();
 
-	color("red")
+	color("FireBrick")
 		rotate([0, 0, ALPHA])
 			translate([0, 0, Thickness+Clearance])
 				rotate(180, [0,1,0])
