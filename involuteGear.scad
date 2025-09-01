@@ -1,5 +1,7 @@
-//////////////////////////////////////////////////////////////////////////////////////////////
-// Public Domain Parametric Involute Spur Gear (and involute helical gear and involute rack)
+////////////////////////////////////////////////////////////////////////////////////
+// Public Domain Parametric Involute Spur Gear
+// (and involute helical gear and involute rack)
+//
 // Version 1.1, January 09, 2011
 // By: Leemon Baird, 2011, Leemon@Leemon.com
 // https://www.thingiverse.com/thing:5505
@@ -10,7 +12,8 @@
 // https://www.thingiverse.com/thing:2562847
 // File: publicDomainGearV1.1_zka.scad
 //
-// 2018-04-10: update, fix rack teeth, inner gears (with hole>gear), fix helix gears/racks using twist.
+// 2018-04-10: update, fix rack teeth, inner gears (with hole>gear), fix helix
+// gears/racks using twist.
 // By: TrinaryLogic
 // https://www.thingiverse.com/thing:2854963
 // File: publicDomainGearV1.3_trinarylogic.scad
@@ -31,7 +34,7 @@
 // https://www.thingiverse.com/thing:6596095
 // File: publicDomainGearV1.5_stone.scad
 //  
-//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
 //
 // This file is public domain.  Use it for any purpose, including commercial
 // applications.  Attribution would be nice, but is not required.  There is

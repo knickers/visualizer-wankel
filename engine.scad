@@ -1,4 +1,4 @@
-use <publicDomainGearV1.5_stone.scad>
+use <involuteGear.scad>
 
 // Distance between the stepper motor screws
 Motor_Size = 31; // [20:0.1:50]
