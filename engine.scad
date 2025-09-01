@@ -178,7 +178,7 @@ module housing() {
 }
 
 module eccentric() {
-	cylinder(r=Hole_Radius-Clearance, h=Thickness+2+Clearance*2);
+	cylinder(r=Hole_Radius-Clearance, h=Thickness+1+Clearance*2);
 	translate([0, -ECC, Thickness/4]) {
 		r = Eccentric_Radius - Clearance;
 		difference() {
