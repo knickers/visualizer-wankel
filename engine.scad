@@ -1,3 +1,5 @@
+// remixed from "Wankel Engine Model": https://www.thingiverse.com/thing:8069
+
 use <involuteGear.scad>
 
 // Distance between the stepper motor screws
